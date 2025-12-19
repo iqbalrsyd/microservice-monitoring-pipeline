@@ -1,0 +1,14 @@
+port: "8080"
+log_level: "info"
+
+services:
+  business: "http://business-service:8081"
+  data: "http://data-service:8082"
+
+prometheus:
+  enabled: true
+  path: "/metrics"
+
+health:
+  check_interval: "30s"
+  timeout: "5s"

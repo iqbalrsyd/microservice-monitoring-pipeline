@@ -1,0 +1,145 @@
+groups:
+  - name: microservices_alerts
+    rules:
+      # API Gateway Alerts
+      - alert: APIGatewayDown
+        expr: up{job="api-gateway"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API Gateway is down"
+          description: "API Gateway has been down for more than 1 minute"
+
+      - alert: APIGatewayHighErrorRate
+        expr: rate(http_requests_total{job="api-gateway",status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on API Gateway"
+          description: "API Gateway error rate is {{ $value }} errors per second"
+
+      - alert: APIGatewayHighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="api-gateway"}[5m])) > 1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency on API Gateway"
+          description: "95th percentile latency is {{ $value }} seconds"
+
+      # Business Service Alerts
+      - alert: BusinessServiceDown
+        expr: up{job="business-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Business Service is down"
+          description: "Business Service has been down for more than 1 minute"
+
+      - alert: BusinessServiceHighErrorRate
+        expr: rate(business_http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on Business Service"
+          description: "Business Service error rate is {{ $value }} errors per second"
+
+      - alert: TooManyActiveOrders
+        expr: business_active_orders > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Too many active orders"
+          description: "There are {{ $value }} active orders, which may indicate processing issues"
+
+      # Data Service Alerts
+      - alert: DataServiceDown
+        expr: up{job="data-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Data Service is down"
+          description: "Data Service has been down for more than 1 minute"
+
+      - alert: DataProcessingBacklog
+        expr: data_records_total{status="pending"} > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Data processing backlog"
+          description: "There are {{ $value }} pending data records to process"
+
+      - alert: DataProcessingSlow
+        expr: rate(data_processing_duration_seconds_sum[5m]) / rate(data_processing_duration_seconds_count[5m]) > 5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Data processing is slow"
+          description: "Average data processing time is {{ $value }} seconds"
+
+      # System Alerts
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80% for instance {{ $labels.instance }}"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 85% for instance {{ $labels.instance }}"
+
+      - alert: LowDiskSpace
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Disk usage is above 90% for instance {{ $labels.instance }}"
+
+  - name: jenkins_alerts
+    rules:
+      - alert: JenkinsDown
+        expr: up{job="jenkins"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Jenkins is down"
+          description: "Jenkins has been down for more than 2 minutes"
+
+      - alert: JenkinsJobFailure
+        expr: jenkins_job_last_build_result_ordinal != 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Jenkins job failure"
+          description: "Jenkins job {{ $labels.job_name }} has failed"
+
+  - name: synthetic_monitoring
+    rules:
+      - alert: EndpointDown
+        expr: probe_success == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Endpoint is down"
+          description: "Endpoint {{ $labels.instance }} is not responding"

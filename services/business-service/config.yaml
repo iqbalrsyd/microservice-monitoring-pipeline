@@ -1,0 +1,15 @@
+port: "8081"
+log_level: "info"
+order_processing_time: "2s"
+
+prometheus:
+  enabled: true
+  path: "/metrics"
+
+business:
+  max_orders: 1000
+  failure_rate: 0.05
+
+health:
+  check_interval: "30s"
+  timeout: "5s"

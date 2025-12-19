@@ -1,0 +1,20 @@
+port: "8082"
+log_level: "info"
+processing_interval: "5s"
+batch_size: 10
+
+database:
+  path: "data.db"
+  timeout: "1s"
+
+prometheus:
+  enabled: true
+  path: "/metrics"
+
+data:
+  max_records: 10000
+  cleanup_interval: "1h"
+
+health:
+  check_interval: "30s"
+  timeout: "5s"
