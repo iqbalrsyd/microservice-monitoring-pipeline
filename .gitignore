@@ -19,7 +19,6 @@ go.work
 # vendor/
 
 # Go module cache
-go.sum
 
 # IDE files
 .vscode/
