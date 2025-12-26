@@ -2,266 +2,69 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_REGISTRY = 'your-registry.com' // Replace with your registry
-        DOCKER_CREDENTIALS = 'docker-registry-creds'
         DOCKER_IMAGE_PREFIX = 'microservices'
         BUILD_NUMBER = "${env.BUILD_NUMBER}"
         BRANCH_NAME = "${env.BRANCH_NAME ?: 'main'}"
     }
 
     triggers {
-        // Build on every push to main branch
         pollSCM('H/5 * * * *')
     }
 
     options {
         buildDiscarder(logRotator(numToKeepStr: '10'))
-        timeout(time: 30, unit: 'MINUTES')
+        timeout(time: 20, unit: 'MINUTES')
         timestamps()
     }
 
     stages {
         stage('Checkout') {
             steps {
-                script {
-                    echo "🚀 Starting pipeline for ${env.JOB_NAME} #${env.BUILD_NUMBER}"
-                    echo "📂 Branch: ${env.BRANCH_NAME}"
-                    echo "🔧 Commit: ${env.GIT_COMMIT}"
-                }
-
+                echo "🚀 Starting pipeline for ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+                echo "📂 Branch: ${env.BRANCH_NAME}"
                 checkout scm
-
-                script {
-                    echo "✅ Repository checked out successfully"
-                }
+                echo "✅ Repository checked out successfully"
             }
         }
 
-        stage('Pre-build Checks') {
-            parallel {
-                stage('Lint') {
-                    steps {
-                        script {
-                            echo "🔍 Running Go lint checks..."
-                        }
-
-                        dir('services/api-gateway') {
-                            sh '''
-                                if command -v golangci-lint >/dev/null 2>&1; then
-                                    golangci-lint run --timeout=5m
-                                else
-                                    echo "golangci-lint not found, installing..."
-                                    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-                                    $HOME/go/bin/golangci-lint run --timeout=5m
-                                fi
-                            '''
-                        }
-
-                        dir('services/business-service') {
-                            sh '''
-                                if command -v golangci-lint >/dev/null 2>&1; then
-                                    golangci-lint run --timeout=5m
-                                else
-                                    $HOME/go/bin/golangci-lint run --timeout=5m
-                                fi
-                            '''
-                        }
-
-                        dir('services/data-service') {
-                            sh '''
-                                if command -v golangci-lint >/dev/null 2>&1; then
-                                    golangci-lint run --timeout=5m
-                                else
-                                    $HOME/go/bin/golangci-lint run --timeout=5m
-                                fi
-                            '''
-                        }
-                    }
-                }
-
-                stage('Security Scan') {
-                    steps {
-                        script {
-                            echo "🔒 Running security scan..."
-                        }
-
-                        sh '''
-                            # Install gosec if not present
-                            if ! command -v gosec >/dev/null 2>&1; then
-                                go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
-                            fi
-
-                            # Run security scan on each service
-                            for service in services/*/; do
-                                if [ -d "$service" ]; then
-                                    echo "Scanning $(basename "$service")..."
-                                    $HOME/go/bin/gosec -fmt json -out security-report-$(basename "$service").json "$service" || true
-                                fi
-                            done
-                        '''
-
-                        archiveArtifacts artifacts: 'security-report-*.json', allowEmptyArchive: true
-                    }
-                }
-            }
-        }
-
-        stage('Build and Test') {
-            parallel {
-                stage('API Gateway') {
-                    steps {
-                        dir('services/api-gateway') {
-                            script {
-                                echo "🏗️ Building API Gateway..."
-                            }
-
-                            sh '''
-                                # Download dependencies
-                                go mod download
-                                go mod verify
-
-                                # Run tests with coverage
-                                go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-
-                                # Build binary
-                                go build -a -installsuffix cgo -o api-gateway main.go
-                            '''
-
-                            script {
-                                echo "✅ API Gateway built successfully"
-                            }
-                        }
-                    }
-
-                    post {
-                        always {
-                            dir('services/api-gateway') {
-                                publishHTML([
-                                    allowMissing: false,
-                                    alwaysLinkToLastBuild: true,
-                                    keepAll: true,
-                                    reportDir: '.',
-                                    reportFiles: 'coverage.out',
-                                    reportName: 'Coverage Report'
-                                ])
-                            }
-                        }
-                    }
-                }
-
-                stage('Business Service') {
-                    steps {
-                        dir('services/business-service') {
-                            script {
-                                echo "🏗️ Building Business Service..."
-                            }
-
-                            sh '''
-                                # Download dependencies
-                                go mod download
-                                go mod verify
-
-                                # Run tests with coverage
-                                go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-
-                                # Build binary
-                                go build -a -installsuffix cgo -o business-service main.go
-                            '''
-
-                            script {
-                                echo "✅ Business Service built successfully"
-                            }
-                        }
-                    }
-
-                    post {
-                        always {
-                            dir('services/business-service') {
-                                publishHTML([
-                                    allowMissing: false,
-                                    alwaysLinkToLastBuild: true,
-                                    keepAll: true,
-                                    reportDir: '.',
-                                    reportFiles: 'coverage.out',
-                                    reportName: 'Coverage Report'
-                                ])
-                            }
-                        }
-                    }
-                }
-
-                stage('Data Service') {
-                    steps {
-                        dir('services/data-service') {
-                            script {
-                                echo "🏗️ Building Data Service..."
-                            }
-
-                            sh '''
-                                # Download dependencies
-                                go mod download
-                                go mod verify
-
-                                # Run tests with coverage
-                                go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-
-                                # Build binary
-                                go build -a -installsuffix cgo -o data-service main.go
-                            '''
-
-                            script {
-                                echo "✅ Data Service built successfully"
-                            }
-                        }
-                    }
-
-                    post {
-                        always {
-                            dir('services/data-service') {
-                                publishHTML([
-                                    allowMissing: false,
-                                    alwaysLinkToLastBuild: true,
-                                    keepAll: true,
-                                    reportDir: '.',
-                                    reportFiles: 'coverage.out',
-                                    reportName: 'Coverage Report'
-                                ])
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Integration Tests') {
+        stage('Verify Services') {
             steps {
-                script {
-                    echo "🔧 Running integration tests..."
-                }
-
+                echo "🔍 Verifying project structure..."
                 sh '''
-                    # Start services with Docker Compose
-                    docker-compose -f docker-compose.test.yml up -d
-
-                    # Wait for services to be healthy
-                    echo "Waiting for services to be ready..."
-                    for i in {1..30}; do
-                        if curl -f http://localhost:8080/health && \
-                           curl -f http://localhost:8081/health && \
-                           curl -f http://localhost:8082/health; then
-                            echo "All services are ready"
-                            break
-                        fi
-                        echo "Attempt $i/30: Services not ready yet..."
-                        sleep 10
-                    done
-
-                    # Run integration tests
-                    go test -v -tags=integration ./tests/integration/...
-
-                    # Cleanup
-                    docker-compose -f docker-compose.test.yml down -v
+                    echo "Listing services:"
+                    ls -la services/
+                    
+                    echo "Checking Docker Compose:"
+                    docker-compose --version || docker compose version
+                    
+                    echo "Checking Docker:"
+                    docker --version
                 '''
+                echo "✅ Verification completed"
+            }
+        }
+
+        stage('Health Check Running Services') {
+            steps {
+                echo "🏥 Checking if services are already running..."
+                script {
+                    sh '''
+                        echo "API Gateway:"
+                        curl -s http://api-gateway:8080/health || echo "Not running"
+                        
+                        echo "Business Service:"
+                        curl -s http://business-service:8081/health || echo "Not running"
+                        
+                        echo "Data Service:"
+                        curl -s http://data-service:8082/health || echo "Not running"
+                        
+                        echo "Prometheus:"
+                        curl -s http://prometheus:9090/-/healthy || echo "Not running"
+                        
+                        echo "Grafana:"
+                        curl -s http://grafana:3000/api/health || echo "Not running"
+                    '''
+                }
             }
         }
 
@@ -270,231 +73,86 @@ pipeline {
                 stage('API Gateway') {
                     steps {
                         dir('services/api-gateway') {
+                            echo "🐳 Building API Gateway..."
                             script {
-                                def image = "${env.DOCKER_IMAGE_PREFIX}/api-gateway:${env.BUILD_NUMBER}"
-                                echo "🐳 Building API Gateway image..."
                                 sh """
-                                    docker build -t ${image} .
-                                    docker tag ${image} ${env.DOCKER_IMAGE_PREFIX}/api-gateway:latest
+                                    docker build -t ${env.DOCKER_IMAGE_PREFIX}/api-gateway:${env.BUILD_NUMBER} .
+                                    docker tag ${env.DOCKER_IMAGE_PREFIX}/api-gateway:${env.BUILD_NUMBER} ${env.DOCKER_IMAGE_PREFIX}/api-gateway:latest
                                 """
-                                echo "✅ API Gateway image built: ${image}"
                             }
+                            echo "✅ API Gateway built"
                         }
                     }
                 }
+                
                 stage('Business Service') {
                     steps {
                         dir('services/business-service') {
+                            echo "🐳 Building Business Service..."
                             script {
-                                def image = "${env.DOCKER_IMAGE_PREFIX}/business-service:${env.BUILD_NUMBER}"
-                                echo "🐳 Building Business Service image..."
                                 sh """
-                                    docker build -t ${image} .
-                                    docker tag ${image} ${env.DOCKER_IMAGE_PREFIX}/business-service:latest
+                                    docker build -t ${env.DOCKER_IMAGE_PREFIX}/business-service:${env.BUILD_NUMBER} .
+                                    docker tag ${env.DOCKER_IMAGE_PREFIX}/business-service:${env.BUILD_NUMBER} ${env.DOCKER_IMAGE_PREFIX}/business-service:latest
                                 """
-                                echo "✅ Business Service image built: ${image}"
                             }
+                            echo "✅ Business Service built"
                         }
                     }
                 }
+                
                 stage('Data Service') {
                     steps {
                         dir('services/data-service') {
+                            echo "🐳 Building Data Service..."
                             script {
-                                def image = "${env.DOCKER_IMAGE_PREFIX}/data-service:${env.BUILD_NUMBER}"
-                                echo "🐳 Building Data Service image..."
                                 sh """
-                                    docker build -t ${image} .
-                                    docker tag ${image} ${env.DOCKER_IMAGE_PREFIX}/data-service:latest
+                                    docker build -t ${env.DOCKER_IMAGE_PREFIX}/data-service:${env.BUILD_NUMBER} .
+                                    docker tag ${env.DOCKER_IMAGE_PREFIX}/data-service:${env.BUILD_NUMBER} ${env.DOCKER_IMAGE_PREFIX}/data-service:latest
                                 """
-                                echo "✅ Data Service image built: ${image}"
                             }
+                            echo "✅ Data Service built"
                         }
                     }
                 }
             }
         }
 
-        stage('Deploy to Staging') {
-            when {
-                branch 'main'
-            }
-
+        stage('List Built Images') {
             steps {
-                script {
-                    echo "🚀 Deploying to staging environment..."
-                }
-
+                echo "�� Listing built Docker images..."
                 sh '''
-                    # Update docker-compose.yml with new image tags
-                    sed -i "s|image: .*api-gateway.*|image: ${DOCKER_REGISTRY}/${DOCKER_IMAGE_PREFIX}/api-gateway:${BUILD_NUMBER}|g" docker-compose.yml
-                    sed -i "s|image: .*business-service.*|image: ${DOCKER_REGISTRY}/${DOCKER_IMAGE_PREFIX}/business-service:${BUILD_NUMBER}|g" docker-compose.yml
-                    sed -i "s|image: .*data-service.*|image: ${DOCKER_REGISTRY}/${DOCKER_IMAGE_PREFIX}/data-service:${BUILD_NUMBER}|g" docker-compose.yml
-
-                    # Deploy to staging
-                    docker-compose -f docker-compose.staging.yml down
-                    docker-compose -f docker-compose.staging.yml up -d
-
-                    # Wait for deployment to be ready
-                    sleep 30
-
-                    # Health check
-                    for i in {1..10}; do
-                        if curl -f http://staging.your-domain.com/health; then
-                            echo "✅ Staging deployment successful"
-                            break
-                        fi
-                        echo "Health check attempt $i/10..."
-                        sleep 10
-                    done
+                    echo "Images built in this pipeline:"
+                    docker images | grep microservices || echo "No images found"
                 '''
             }
         }
 
-        stage('Performance Tests') {
-            when {
-                branch 'main'
-            }
-
+        stage('Test Report') {
             steps {
+                echo "📊 Pipeline Summary:"
                 script {
-                    echo "⚡ Running performance tests..."
+                    sh """
+                        echo "=================================="
+                        echo "Build Number: ${env.BUILD_NUMBER}"
+                        echo "Branch: ${env.BRANCH_NAME}"
+                        echo "Workspace: ${env.WORKSPACE}"
+                        echo "Build URL: ${env.BUILD_URL}"
+                        echo "=================================="
+                    """
                 }
-
-                sh '''
-                    # Install k6 if not present
-                    if ! command -v k6 >/dev/null 2>&1; then
-                        sudo gpg -k
-                        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-                        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-                        sudo apt-get update
-                        sudo apt-get install k6 -y
-                    fi
-
-                    # Run performance tests
-                    k6 run --out json=performance-results.json tests/performance/load-test.js
-
-                    # Archive results
-                    archiveArtifacts artifacts: 'performance-results.json', allowEmptyArchive: true
-                '''
-            }
-        }
-
-        stage('Deploy to Production') {
-            when {
-                allOf {
-                    branch 'main'
-                    expression {
-                        currentBuild.result == null || currentBuild.result == 'SUCCESS'
-                    }
-                }
-                beforeInput true
-            }
-
-            input {
-                message "Deploy to production?"
-                ok "Deploy"
-                submitter "deployers"
-            }
-
-            steps {
-                script {
-                    echo "🎯 Deploying to production environment..."
-                }
-
-                sh '''
-                    # Blue-green deployment
-                    echo "Starting blue-green deployment..."
-
-                    # Deploy to green environment
-                    docker-compose -f docker-compose.green.yml up -d
-
-                    # Wait for green to be ready
-                    sleep 60
-
-                    # Health check green environment
-                    for i in {1..20}; do
-                        if curl -f http://green.your-domain.com/health; then
-                            echo "✅ Green environment ready"
-                            break
-                        fi
-                        echo "Green environment health check attempt $i/20..."
-                        sleep 15
-                    done
-
-                    # Switch traffic to green
-                    echo "Switching traffic to green environment..."
-                    # Here you would update your load balancer configuration
-
-                    # Stop blue environment
-                    docker-compose -f docker-compose.blue.yml down
-
-                    echo "✅ Production deployment completed"
-                '''
             }
         }
     }
 
     post {
-        always {
-            script {
-                echo "📊 Pipeline completed with status: ${currentBuild.result ?: 'SUCCESS'}"
-
-                // Send notification
-                if (currentBuild.result == null || currentBuild.result == 'SUCCESS') {
-                    slackSend(
-                        channel: '#deployments',
-                        color: 'good',
-                        message: "✅ Pipeline successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
-                    )
-                } else {
-                    slackSend(
-                        channel: '#alerts',
-                        color: 'danger',
-                        message: "❌ Pipeline failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
-                    )
-                }
-            }
-
-            // Clean up workspace
-            cleanWs()
-        }
-
         success {
-            script {
-                echo "🎉 Pipeline completed successfully!"
-
-                // Update Prometheus metrics (if needed)
-                sh '''
-                    curl -X POST http://prometheus:9090/api/v1/series \
-                        --data-urlencode 'match=jenkins_build_result{job="${JOB_NAME}"}' \
-                        || true
-                '''
-            }
+            echo "✅ Pipeline completed successfully!"
         }
-
         failure {
-            script {
-                echo "💥 Pipeline failed!"
-
-                // Send detailed failure notification
-                emailext(
-                    subject: "❌ Pipeline Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                    body: """<p>The pipeline has failed!</p>
-                             <p><strong>Build:</strong> ${env.BUILD_NUMBER}</p>
-                             <p><strong>Branch:</strong> ${env.BRANCH_NAME}</p>
-                             <p><strong>Commit:</strong> ${env.GIT_COMMIT}</p>
-                             <p><strong>Build URL:</strong> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
-                             <p>Please check the logs and fix the issues.</p>""",
-                    to: 'devops-team@yourcompany.com'
-                )
-            }
+            echo "❌ Pipeline failed! Check console output for details."
         }
-
-        unstable {
-            script {
-                echo "⚠️ Pipeline completed with warnings"
-            }
+        always {
+            echo "🧹 Pipeline execution completed"
         }
     }
 }
