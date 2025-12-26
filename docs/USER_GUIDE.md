@@ -47,7 +47,7 @@
 | API Gateway | http://localhost:8090 | None | Main API endpoint |
 | Business Service | http://localhost:8081 | None | Business logic API |
 | Data Service | http://localhost:8082 | None | Data processing API |
-| Jenkins | http://localhost:8084 | admin/admin | CI/CD Pipeline |
+| Jenkins | http://localhost:8080 | admin/admin | CI/CD Pipeline |
 | cAdvisor | http://localhost:8083 | None | Container metrics |
 
 ### API Endpoints
@@ -223,7 +223,7 @@ The Jenkins pipeline automates the entire software delivery process:
 ### Triggering Builds
 
 **Manual Build:**
-1. Access Jenkins at http://localhost:8084
+1. Access Jenkins at http://localhost:8080
 2. Select your pipeline
 3. Click "Build Now"
 

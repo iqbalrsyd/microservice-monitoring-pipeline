@@ -43,12 +43,12 @@ Meskipun sudah deploy dengan Docker, Jenkins memberikan:
 ## 🔐 AKSES JENKINS
 
 ### Web Interface:
-- **URL**: http://localhost:8084
+- **URL**: http://localhost:8080
 - **Username**: `admin`
 - **Password**: `admin`
 
 ### Port Mapping:
-- `8084` → Jenkins Web UI
+- `8080` → Jenkins Web UI
 - `50001` → Jenkins Agent communication
 
 ---
@@ -57,7 +57,7 @@ Meskipun sudah deploy dengan Docker, Jenkins memberikan:
 
 ### 1. Login ke Jenkins
 ```bash
-xdg-open http://localhost:8084
+xdg-open http://localhost:8080
 ```
 Login dengan: `admin` / `admin`
 
@@ -304,6 +304,6 @@ docker exec -u root jenkins chmod 666 /var/run/docker.sock
 ## 📚 RESOURCES
 
 - **Jenkins Docs**: https://jenkins.io/doc/
-- **Pipeline Syntax**: http://localhost:8084/pipeline-syntax/
+- **Pipeline Syntax**: http://localhost:8080/pipeline-syntax/
 - **Jenkinsfile Examples**: https://github.com/jenkinsci/pipeline-examples
 
