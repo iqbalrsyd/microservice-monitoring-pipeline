@@ -12,26 +12,12 @@ pipeline {
     triggers {
         // Build on every push to main branch
         pollSCM('H/5 * * * *')
-
-        // Webhook trigger for Git integration
-        GenericTrigger(
-            genericVariables: [
-                [key: 'ref', value: '$.ref'],
-                [key: 'repository', value: '$.repository.name']
-            ],
-            causeString: 'Triggered by push to $ref',
-            token: 'microservices-trigger',
-            printContributedVariables: true,
-            printPostContent: true,
-            silentResponse: false
-        )
     }
 
     options {
         buildDiscarder(logRotator(numToKeepStr: '10'))
         timeout(time: 30, unit: 'MINUTES')
         timestamps()
-        ansiColor('xterm')
     }
 
     stages {
@@ -280,61 +266,52 @@ pipeline {
         }
 
         stage('Build Docker Images') {
-            steps {
-                script {
-                    echo "🐳 Building Docker images..."
-                }
-
-                parallel(
-                    'API Gateway': {
+            parallel {
+                stage('API Gateway') {
+                    steps {
                         dir('services/api-gateway') {
                             script {
-                                def image = "${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_PREFIX}/api-gateway:${env.BUILD_NUMBER}"
-
+                                def image = "${env.DOCKER_IMAGE_PREFIX}/api-gateway:${env.BUILD_NUMBER}"
+                                echo "🐳 Building API Gateway image..."
                                 sh """
                                     docker build -t ${image} .
-                                    docker tag ${image} ${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_PREFIX}/api-gateway:latest
+                                    docker tag ${image} ${env.DOCKER_IMAGE_PREFIX}/api-gateway:latest
                                 """
-
-                                script {
-                                    echo "✅ API Gateway image built: ${image}"
-                                }
-                            }
-                        }
-                    },
-                    'Business Service': {
-                        dir('services/business-service') {
-                            script {
-                                def image = "${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_PREFIX}/business-service:${env.BUILD_NUMBER}"
-
-                                sh """
-                                    docker build -t ${image} .
-                                    docker tag ${image} ${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_PREFIX}/business-service:latest
-                                """
-
-                                script {
-                                    echo "✅ Business Service image built: ${image}"
-                                }
-                            }
-                        }
-                    },
-                    'Data Service': {
-                        dir('services/data-service') {
-                            script {
-                                def image = "${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_PREFIX}/data-service:${env.BUILD_NUMBER}"
-
-                                sh """
-                                    docker build -t ${image} .
-                                    docker tag ${image} ${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_PREFIX}/data-service:latest
-                                """
-
-                                script {
-                                    echo "✅ Data Service image built: ${image}"
-                                }
+                                echo "✅ API Gateway image built: ${image}"
                             }
                         }
                     }
-                )
+                }
+                stage('Business Service') {
+                    steps {
+                        dir('services/business-service') {
+                            script {
+                                def image = "${env.DOCKER_IMAGE_PREFIX}/business-service:${env.BUILD_NUMBER}"
+                                echo "🐳 Building Business Service image..."
+                                sh """
+                                    docker build -t ${image} .
+                                    docker tag ${image} ${env.DOCKER_IMAGE_PREFIX}/business-service:latest
+                                """
+                                echo "✅ Business Service image built: ${image}"
+                            }
+                        }
+                    }
+                }
+                stage('Data Service') {
+                    steps {
+                        dir('services/data-service') {
+                            script {
+                                def image = "${env.DOCKER_IMAGE_PREFIX}/data-service:${env.BUILD_NUMBER}"
+                                echo "🐳 Building Data Service image..."
+                                sh """
+                                    docker build -t ${image} .
+                                    docker tag ${image} ${env.DOCKER_IMAGE_PREFIX}/data-service:latest
+                                """
+                                echo "✅ Data Service image built: ${image}"
+                            }
+                        }
+                    }
+                }
             }
         }
 
