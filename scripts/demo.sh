@@ -12,7 +12,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Demo configuration
-API_GATEWAY_URL="http://localhost:8080"
+API_GATEWAY_URL="http://localhost:8090"
 BUSINESS_SERVICE_URL="http://localhost:8081"
 DATA_SERVICE_URL="http://localhost:8082"
 GRAFANA_URL="http://localhost:3000"

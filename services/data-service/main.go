@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -293,8 +292,12 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	// Check database health
 	dbHealthy := true
 	err := db.View(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte("health_check"))
-		return err
+		// Just check if we can access the buckets (read-only operation)
+		b := tx.Bucket([]byte("records"))
+		if b == nil {
+			return fmt.Errorf("records bucket not found")
+		}
+		return nil
 	})
 	if err != nil {
 		dbHealthy = false

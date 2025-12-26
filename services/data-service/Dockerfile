@@ -24,11 +24,13 @@ WORKDIR /root/
 COPY --from=builder /app/data-service .
 COPY --from=builder /app/config.yaml .
 
-# Create data directory
+# Create non-root user first
+RUN adduser -D -s /bin/sh appuser
+
+# Create data directory and set ownership
 RUN mkdir -p /root/data && chown -R appuser:appuser /root/
 
-# Create non-root user
-RUN adduser -D -s /bin/sh appuser
+# Switch to non-root user
 USER appuser
 
 # Expose port

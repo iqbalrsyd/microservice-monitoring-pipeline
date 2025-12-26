@@ -371,7 +371,7 @@ func deleteOrderHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	orderID := vars["id"]
 
-	order, exists := orders[orderID]
+	_, exists := orders[orderID]
 	if !exists {
 		http.Error(w, "Order not found", http.StatusNotFound)
 		return

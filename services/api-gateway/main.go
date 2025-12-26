@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/prometheus/client_golang/api"
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"

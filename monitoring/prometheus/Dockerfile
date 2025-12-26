@@ -1,11 +1,8 @@
 FROM prom/prometheus:v2.47.2
 
-# Copy configuration files
-COPY prometheus.yml /etc/prometheus/
-COPY rules/ /etc/prometheus/rules/
-
-# Set permissions
-RUN chown -R prometheus:prometheus /etc/prometheus
+# Copy configuration files with proper ownership
+COPY --chown=prometheus:prometheus prometheus.yml /etc/prometheus/
+COPY --chown=prometheus:prometheus rules/ /etc/prometheus/rules/
 
 # Expose port
 EXPOSE 9090

@@ -57,7 +57,7 @@ docker-compose up -d
 # Access services
 # Grafana: http://localhost:3000 (admin/admin)
 # Prometheus: http://localhost:9090
-# API Gateway: http://localhost:8080
+# API Gateway: http://localhost:8090
 # Business Service: http://localhost:8081
 # Data Service: http://localhost:8082
 ```

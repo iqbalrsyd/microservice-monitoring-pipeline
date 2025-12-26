@@ -44,7 +44,7 @@
 |---------|-----|-------------|---------|
 | Grafana | http://localhost:3000 | admin/admin | Dashboards and visualization |
 | Prometheus | http://localhost:9090 | None | Metrics and alerting |
-| API Gateway | http://localhost:8080 | None | Main API endpoint |
+| API Gateway | http://localhost:8090 | None | Main API endpoint |
 | Business Service | http://localhost:8081 | None | Business logic API |
 | Data Service | http://localhost:8082 | None | Data processing API |
 | Jenkins | http://localhost:8084 | admin/admin | CI/CD Pipeline |
@@ -269,7 +269,7 @@ docker system df
 #### Metrics Not Appearing
 **Problem:** No data in Prometheus/Grafana
 **Solution:**
-1. Verify service endpoints: `curl http://localhost:8080/metrics`
+1. Verify service endpoints: `curl http://localhost:8090/metrics`
 2. Check Prometheus targets: http://localhost:9090/targets
 3. Verify network connectivity: `docker network ls`
 
@@ -305,7 +305,7 @@ docker stats
 
 **Manual health checks:**
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:8090/health
 curl http://localhost:8081/health
 curl http://localhost:8082/health
 ```

@@ -31,6 +31,28 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Function to check if docker compose is available (either as plugin or standalone)
+docker_compose_exists() {
+    # Check for docker compose plugin (modern)
+    if docker compose version >/dev/null 2>&1; then
+        return 0
+    fi
+    # Check for $(get_docker_compose_cmd) standalone (legacy)
+    if command_exists "$(get_docker_compose_cmd)"; then
+        return 0
+    fi
+    return 1
+}
+
+# Get the appropriate docker compose command
+get_docker_compose_cmd() {
+    if docker compose version >/dev/null 2>&1; then
+        echo "docker compose"
+    else
+        echo "$(get_docker_compose_cmd)"
+    fi
+}
+
 # Function to check if service is healthy
 check_service_health() {
     local service_name=$1
@@ -61,7 +83,7 @@ echo
 # Check prerequisites
 print_status "📋 Checking prerequisites..."
 
-prerequisites=("docker" "docker-compose" "git" "curl")
+prerequisites=("docker" "git" "curl")
 missing_prereqs=()
 
 for prereq in "${prerequisites[@]}"; do
@@ -71,6 +93,13 @@ for prereq in "${prerequisites[@]}"; do
         print_success "✓ $prereq is installed"
     fi
 done
+
+# Check for Docker Compose (either plugin or standalone)
+if ! docker_compose_exists; then
+    missing_prereqs+=("$(get_docker_compose_cmd)")
+else
+    print_success "✓ $(get_docker_compose_cmd) is installed"
+fi
 
 if [ ${#missing_prereqs[@]} -ne 0 ]; then
     print_error "Missing prerequisites: ${missing_prereqs[*]}"
@@ -96,7 +125,7 @@ print_status "🏗️ Building and starting services..."
 
 # Start with monitoring stack first
 print_status "Starting monitoring stack..."
-docker-compose up -d prometheus grafana loki promtail node-exporter cadvisor alertmanager
+$(get_docker_compose_cmd) up -d prometheus grafana loki promtail node-exporter cadvisor alertmanager
 
 # Wait for monitoring services to be ready
 sleep 10
@@ -107,19 +136,19 @@ check_service_health "Grafana" "http://localhost:3000/api/health"
 
 # Start microservices
 print_status "Starting microservices..."
-docker-compose up -d api-gateway business-service data-service
+$(get_docker_compose_cmd) up -d api-gateway business-service data-service
 
 # Wait for microservices to be ready
 sleep 15
 
 # Check microservices health
-check_service_health "API Gateway" "http://localhost:8080/health"
+check_service_health "API Gateway" "http://localhost:8090/health"
 check_service_health "Business Service" "http://localhost:8081/health"
 check_service_health "Data Service" "http://localhost:8082/health"
 
 # Start Jenkins
 print_status "Starting Jenkins..."
-docker-compose up -d jenkins
+$(get_docker_compose_cmd) up -d jenkins
 
 # Wait for Jenkins to be ready
 print_status "Waiting for Jenkins to start..."
@@ -130,7 +159,7 @@ check_service_health "Jenkins" "http://localhost:8084/login"
 
 # Start Nginx
 print_status "Starting Nginx reverse proxy..."
-docker-compose up -d nginx
+$(get_docker_compose_cmd) up -d nginx
 
 sleep 5
 
@@ -153,7 +182,7 @@ echo
 
 # Print access information
 echo -e "${BLUE}📋 Service Access Information:${NC}"
-echo -e "• API Gateway:     ${GREEN}http://localhost:8080${NC}"
+echo -e "• API Gateway:     ${GREEN}http://localhost:8090${NC}"
 echo -e "• Business Service:${GREEN}http://localhost:8081${NC}"
 echo -e "• Data Service:    ${GREEN}http://localhost:8082${NC}"
 echo -e "• Grafana:         ${GREEN}http://localhost:3000${NC} (admin/admin)"
@@ -166,11 +195,11 @@ echo
 
 # Print useful commands
 echo -e "${BLUE}🛠️ Useful Commands:${NC}"
-echo -e "• View logs:          ${YELLOW}docker-compose logs -f [service-name]${NC}"
-echo -e "• Stop all services:  ${YELLOW}docker-compose down${NC}"
-echo -e "• Restart service:    ${YELLOW}docker-compose restart [service-name]${NC}"
-echo -e "• Check status:       ${YELLOW}docker-compose ps${NC}"
-echo -e "• View metrics:       ${YELLOW}curl http://localhost:8080/metrics${NC}"
+echo -e "• View logs:          ${YELLOW}$(get_docker_compose_cmd) logs -f [service-name]${NC}"
+echo -e "• Stop all services:  ${YELLOW}$(get_docker_compose_cmd) down${NC}"
+echo -e "• Restart service:    ${YELLOW}$(get_docker_compose_cmd) restart [service-name]${NC}"
+echo -e "• Check status:       ${YELLOW}$(get_docker_compose_cmd) ps${NC}"
+echo -e "• View metrics:       ${YELLOW}curl http://localhost:8090/metrics${NC}"
 echo
 
 # Print next steps

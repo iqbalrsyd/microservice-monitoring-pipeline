@@ -28,7 +28,7 @@ chmod +x scripts/*.sh
 | Service | URL | Credentials | Purpose |
 |---------|-----|-------------|---------|
 | Grafana | http://localhost:3000 | admin/admin | Main Dashboard |
-| API Gateway | http://localhost:8080 | - | Main API |
+| API Gateway | http://localhost:8090 | - | Main API |
 | Business Service | http://localhost:8081 | - | Orders API |
 | Data Service | http://localhost:8082 | - | Data Processing |
 | Prometheus | http://localhost:9090 | - | Metrics |

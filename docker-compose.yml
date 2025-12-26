@@ -13,7 +13,7 @@ services:
       context: ./services/api-gateway
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8090:8080"
     networks:
       - microservices
       - monitoring
@@ -248,13 +248,14 @@ services:
     image: jenkins/jenkins:lts
     ports:
       - "8084:8080"
-      - "50000:50000"
+      - "50001:50000"
     networks:
       - monitoring
       - microservices
     environment:
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
       - JENKINS_OPTS=--httpPort=8080
+      - CASC_JENKINS_CONFIG=/var/jenkins_home/casc/jenkins.yaml
     volumes:
       - jenkins_data:/var/jenkins_home
       - ./jenkins:/var/jenkins_home/casc:ro
